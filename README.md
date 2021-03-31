@@ -1,2 +1,2 @@
 # edgeql
-EdgeQL
+**EdgeQL** is under development

@@ -1,0 +1,60 @@
+name: edgeql
+base: core18
+type: app
+adopt-info: version
+summary: EdgeQL
+description: |
+  This software is under development
+
+grade: stable
+confinement: strict
+
+apps:
+  edgeql:
+    adapter: none
+    command: bin/edgeql
+    plugs: [home, network]
+
+parts:
+  version:
+    plugin: nil
+    source: .
+    override-pull: |
+      cd $SNAPCRAFT_PROJECT_DIR
+      VERSION=$(cat VERSION 2>/dev/null || echo 0.0.0)
+      echo $VERSION-$(date +%Y%m%d)+$(git rev-parse --short HEAD)
+      snapcraftctl set-version ${VERSION}
+
+  go:
+    plugin: nil
+    source: snap/local
+    build-packages: [curl]
+    override-build: |
+      # use dpkg architecture to figure out our target arch
+      # note - we specifically don't use arch
+      case "$(dpkg --print-architecture)" in
+        amd64)
+          FILE_NAME=go1.16.linux-amd64.tar.gz 
+          #go1.15.8.linux-amd64.tar.gz 
+          ;;
+        arm64)
+          FILE_NAME=go1.16.linux-arm64.tar.gz 
+          ;;
+      esac 
+      curl https://dl.google.com/go/$FILE_NAME -O 
+      tar -C $SNAPCRAFT_STAGE -xf go*.tar.gz --strip-components=1
+    prime:
+      - "-*"
+
+  edgeql:
+    source: . 
+    plugin: make 
+    after: [go]
+    override-build: |
+      export PATH="$SNAPCRAFT_STAGE/go/bin:$GOPATH/bin:$PATH"
+      cd $SNAPCRAFT_PART_SRC
+      
+      go build ./cmd/edgeql
+
+      install -DT "./edgeql" "$SNAPCRAFT_PART_INSTALL/bin/edgeql"
+      
